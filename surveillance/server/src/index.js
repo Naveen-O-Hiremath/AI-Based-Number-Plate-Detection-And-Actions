@@ -39,6 +39,9 @@ app.get('/api/health', (req, res) => {
 app.use('/api/detect', detectRoutes);
 app.use('/api', dataRoutes);
 
+// Browser-based edge scanner (works on any phone over the HTTPS listener).
+app.use(express.static(path.join(__dirname, '..', 'public')));
+
 // Serve the built admin panel if it exists, so one port serves everything.
 const adminDist = path.join(__dirname, '..', '..', 'admin', 'dist');
 if (existsSync(adminDist)) {

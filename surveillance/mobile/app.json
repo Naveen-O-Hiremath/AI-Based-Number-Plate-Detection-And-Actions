@@ -1,0 +1,26 @@
+{
+  "expo": {
+    "name": "ANPR Edge Camera",
+    "slug": "anpr-edge-camera",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "splash": { "backgroundColor": "#0a0f1c", "resizeMode": "contain" },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "Used to capture number plates for ANPR detection.",
+        "NSAppTransportSecurity": { "NSAllowsArbitraryLoads": true }
+      }
+    },
+    "android": {
+      "package": "com.anpr.edgecamera",
+      "permissions": ["CAMERA"],
+      "usesCleartextTraffic": true
+    },
+    "plugins": [
+      ["expo-camera", { "cameraPermission": "Allow ANPR Edge Camera to use the camera to scan number plates." }]
+    ]
+  }
+}
