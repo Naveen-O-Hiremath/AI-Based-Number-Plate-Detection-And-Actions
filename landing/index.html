@@ -1,0 +1,849 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ANPR · AI-Powered Vehicle Number Plate Detection &amp; Alert System</title>
+<meta name="description" content="Captures plates from cameras across the road network, reads them with OCR, matches owners in the database, and acts on policy in real time." />
+<style>
+    :root {
+        --bg: #0a0f1c;
+        --bg-panel: #121b2e;
+        --bg-panel-2: #0d1524;
+        --line: #223049;
+        --text: #eef2f8;
+        --text-dim: #9aa7bd;
+        --text-faint: #64738f;
+
+        --yellow: #f5c518;
+        --yellow-dim: rgba(245, 197, 24, 0.14);
+        --red: #ef4444;
+        --red-dim: rgba(239, 68, 68, 0.13);
+        --amber: #f0a202;
+        --amber-dim: rgba(240, 162, 2, 0.13);
+        --green: #2fbf71;
+        --green-dim: rgba(47, 191, 113, 0.13);
+        --blue: #4c8dff;
+        --blue-dim: rgba(76, 141, 255, 0.13);
+
+        --font-display: 'Bahnschrift', 'DIN Alternate', 'Oswald', 'Arial Narrow', sans-serif;
+        --font-body: 'Segoe UI', 'Inter', system-ui, -apple-system, sans-serif;
+        --font-mono: 'Cascadia Code', 'Cascadia Mono', Consolas, 'SF Mono', monospace;
+
+        --max: 1120px;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+
+    body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--font-body);
+        line-height: 1.55;
+        -webkit-font-smoothing: antialiased;
+    }
+
+    img, svg { max-width: 100%; display: block; }
+
+    .wrap {
+        max-width: var(--max);
+        margin: 0 auto;
+        padding: 0 28px;
+    }
+
+    a { color: inherit; }
+
+    h1, h2, h3 {
+        font-family: var(--font-display);
+        font-weight: 700;
+        text-wrap: balance;
+        margin: 0;
+    }
+
+    .eyebrow {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--blue);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 14px;
+    }
+    .eyebrow::before {
+        content: '';
+        width: 7px; height: 7px;
+        background: var(--blue);
+        border-radius: 50%;
+        box-shadow: 0 0 8px var(--blue);
+    }
+
+    /* ---------- lane-marking divider ---------- */
+    .lane-divider {
+        height: 34px;
+        position: relative;
+        overflow: hidden;
+        margin: 0;
+    }
+    .lane-divider::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: -60px;
+        right: -60px;
+        height: 4px;
+        transform: translateY(-50%);
+        background-image: repeating-linear-gradient(90deg, var(--yellow) 0 34px, transparent 34px 58px);
+        opacity: 0.55;
+        animation: laneScroll 4.5s linear infinite;
+    }
+    @keyframes laneScroll { from { transform: translateY(-50%) translateX(0); } to { transform: translateY(-50%) translateX(-58px); } }
+    @media (prefers-reduced-motion: reduce) { .lane-divider::before { animation: none; } }
+
+    /* ---------- nav ---------- */
+    header.site {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        background: rgba(10, 15, 28, 0.86);
+        backdrop-filter: blur(10px);
+        border-bottom: 1px solid var(--line);
+    }
+    .nav {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px 0;
+    }
+    .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-family: var(--font-display);
+        font-weight: 700;
+        font-size: 17px;
+        letter-spacing: 0.01em;
+    }
+    .brand-badge {
+        width: 30px; height: 30px;
+        border-radius: 7px;
+        background: var(--yellow);
+        color: #1a1305;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 13px; font-weight: 800;
+        font-family: var(--font-mono);
+    }
+    .nav-links { display: flex; gap: 28px; font-size: 13.5px; color: var(--text-dim); }
+    .nav-links a:hover { color: var(--text); }
+    @media (max-width: 760px) { .nav-links { display: none; } }
+
+    /* ---------- hero ---------- */
+    .hero {
+        padding: 76px 0 56px;
+        display: grid;
+        grid-template-columns: 1.2fr 0.8fr;
+        gap: 48px;
+        align-items: center;
+    }
+    @media (max-width: 860px) { .hero { grid-template-columns: 1fr; padding-top: 48px; } }
+
+    .hero h1 {
+        font-size: clamp(34px, 5.4vw, 54px);
+        line-height: 1.06;
+        letter-spacing: -0.01em;
+    }
+    .hero h1 .hl { color: var(--yellow); }
+
+    .hero p.lede {
+        margin: 20px 0 0;
+        max-width: 52ch;
+        color: var(--text-dim);
+        font-size: 16px;
+    }
+
+    .hero-ctas { display: flex; gap: 12px; margin-top: 30px; flex-wrap: wrap; }
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 11px 20px;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        text-decoration: none;
+        border: 1px solid transparent;
+    }
+    .btn.primary { background: var(--yellow); color: #1a1305; }
+    .btn.primary:hover { filter: brightness(1.08); }
+    .btn.ghost { border-color: var(--line); color: var(--text); }
+    .btn.ghost:hover { border-color: var(--text-faint); }
+
+    .stat-row {
+        display: flex;
+        gap: 36px;
+        margin-top: 40px;
+        flex-wrap: wrap;
+    }
+    .stat-row .stat b {
+        display: block;
+        font-family: var(--font-display);
+        font-size: 26px;
+    }
+    .stat-row .stat span {
+        font-family: var(--font-mono);
+        font-size: 10.5px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--text-faint);
+    }
+
+    /* ---------- live capture ticker panel ---------- */
+    .capture-panel {
+        background: var(--bg-panel);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        overflow: hidden;
+        box-shadow: 0 20px 60px -20px rgba(0,0,0,0.6);
+    }
+    .capture-panel .bar {
+        display: flex;
+        gap: 6px;
+        padding: 11px 14px;
+        border-bottom: 1px solid var(--line);
+    }
+    .capture-panel .bar span {
+        width: 9px; height: 9px; border-radius: 50%;
+        background: var(--line);
+    }
+    .capture-panel .bar span:nth-child(1) { background: var(--red); }
+    .capture-panel .bar span:nth-child(2) { background: var(--amber); }
+    .capture-panel .bar span:nth-child(3) { background: var(--green); }
+    .capture-panel .bar em {
+        font-style: normal;
+        margin-left: 8px;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--text-faint);
+    }
+
+    .feed {
+        position: relative;
+        height: 168px;
+        background:
+            linear-gradient(var(--bg-panel-2), var(--bg-panel-2)),
+            repeating-linear-gradient(0deg, transparent 0 27px, rgba(255,255,255,0.025) 27px 28px);
+        overflow: hidden;
+    }
+    .plate-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 9px 16px;
+        border-bottom: 1px solid rgba(255,255,255,0.04);
+        font-family: var(--font-mono);
+        font-size: 12.5px;
+        opacity: 0;
+        animation: rowIn 0.4s ease forwards;
+    }
+    @keyframes rowIn { to { opacity: 1; } }
+    .plate-chip {
+        background: #1c2740;
+        border: 1px solid var(--line);
+        border-radius: 4px;
+        padding: 2px 8px;
+        letter-spacing: 0.04em;
+        color: var(--text);
+    }
+    .plate-row.match .plate-chip { border-color: var(--red); color: var(--red); }
+    .plate-row .loc { color: var(--text-faint); flex: 1; }
+    .plate-row .tag {
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        padding: 1px 7px;
+        border-radius: 100px;
+    }
+    .tag.ok { background: var(--green-dim); color: var(--green); }
+    .tag.flag { background: var(--red-dim); color: var(--red); }
+
+    .capture-panel .foot {
+        padding: 10px 16px;
+        font-family: var(--font-mono);
+        font-size: 10.5px;
+        color: var(--text-faint);
+        border-top: 1px solid var(--line);
+        display: flex; justify-content: space-between;
+    }
+
+    /* ---------- section shell ---------- */
+    section { padding: 64px 0; }
+    .section-head { max-width: 640px; margin-bottom: 40px; }
+    .section-head h2 { font-size: clamp(24px, 3.4vw, 32px); }
+    .section-head p { color: var(--text-dim); margin-top: 12px; font-size: 15px; }
+
+    /* ---------- pipeline ---------- */
+    .pipeline {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 0;
+        position: relative;
+    }
+    @media (max-width: 980px) { .pipeline { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 560px) { .pipeline { grid-template-columns: 1fr; } }
+
+    .pipe-step {
+        background: var(--bg-panel);
+        border: 1px solid var(--line);
+        padding: 22px 18px;
+        position: relative;
+    }
+    .pipeline .pipe-step:not(:last-child)::after {
+        content: '→';
+        position: absolute;
+        right: -13px; top: 50%;
+        transform: translateY(-50%);
+        color: var(--text-faint);
+        font-size: 15px;
+        z-index: 2;
+        background: var(--bg);
+        width: 22px; text-align: center;
+    }
+    @media (max-width: 980px) { .pipeline .pipe-step:nth-child(odd)::after { display: none; } }
+    @media (max-width: 560px) { .pipeline .pipe-step::after { display: none; } }
+
+    .pipe-step .num { font-family: var(--font-mono); font-size: 11px; color: var(--text-faint); }
+    .pipe-icon {
+        width: 38px; height: 38px;
+        border-radius: 9px;
+        background: var(--blue-dim);
+        display: flex; align-items: center; justify-content: center;
+        margin: 12px 0 14px;
+        color: var(--blue);
+    }
+    .pipe-step h3 { font-size: 15.5px; margin-bottom: 6px; }
+    .pipe-step p { font-size: 12.5px; color: var(--text-dim); margin: 0; }
+
+    /* ---------- module cards ---------- */
+    .modules {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+    }
+    @media (max-width: 700px) { .modules { grid-template-columns: 1fr; } }
+
+    .module-card {
+        border-radius: 12px;
+        padding: 26px;
+        border: 1px solid var(--line);
+        position: relative;
+        overflow: hidden;
+    }
+    .module-card.red { background: linear-gradient(160deg, var(--red-dim), transparent 60%); }
+    .module-card.amber { background: linear-gradient(160deg, var(--amber-dim), transparent 60%); }
+    .module-card.green { background: linear-gradient(160deg, var(--green-dim), transparent 60%); }
+    .module-card.blue { background: linear-gradient(160deg, var(--blue-dim), transparent 60%); }
+
+    .module-icon {
+        width: 40px; height: 40px;
+        border-radius: 10px;
+        display: flex; align-items: center; justify-content: center;
+        margin-bottom: 16px;
+    }
+    .module-card.red .module-icon { background: var(--red-dim); color: var(--red); }
+    .module-card.amber .module-icon { background: var(--amber-dim); color: var(--amber); }
+    .module-card.green .module-icon { background: var(--green-dim); color: var(--green); }
+    .module-card.blue .module-icon { background: var(--blue-dim); color: var(--blue); }
+
+    .module-card .eyebrow-sm {
+        font-family: var(--font-mono);
+        font-size: 10.5px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        margin-bottom: 6px;
+    }
+    .module-card.red .eyebrow-sm { color: var(--red); }
+    .module-card.amber .eyebrow-sm { color: var(--amber); }
+    .module-card.green .eyebrow-sm { color: var(--green); }
+    .module-card.blue .eyebrow-sm { color: var(--blue); }
+
+    .module-card h3 { font-size: 18px; margin-bottom: 8px; }
+    .module-card p { color: var(--text-dim); font-size: 13.5px; margin: 0; }
+
+    /* ---------- console mockup ---------- */
+    .console-grid {
+        display: grid;
+        grid-template-columns: 1.1fr 0.9fr;
+        gap: 28px;
+        align-items: start;
+    }
+    @media (max-width: 860px) { .console-grid { grid-template-columns: 1fr; } }
+
+    .terminal {
+        background: var(--bg-panel-2);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        overflow: hidden;
+    }
+    .terminal .bar { display: flex; gap: 6px; padding: 11px 14px; border-bottom: 1px solid var(--line); }
+    .terminal .bar span { width: 9px; height: 9px; border-radius: 50%; }
+    .terminal .bar span:nth-child(1) { background: var(--red); }
+    .terminal .bar span:nth-child(2) { background: var(--amber); }
+    .terminal .bar span:nth-child(3) { background: var(--green); }
+    .terminal .bar em { font-style: normal; margin-left: 8px; font-family: var(--font-mono); font-size: 11px; color: var(--text-faint); }
+    .terminal .body { padding: 18px 20px; font-family: var(--font-mono); font-size: 12.5px; line-height: 2; }
+    .terminal .comment { color: var(--text-faint); }
+    .terminal .l-red { color: var(--red); }
+    .terminal .l-amber { color: var(--amber); }
+    .terminal .l-green { color: var(--green); }
+    .terminal .l-blue { color: var(--blue); }
+    .terminal .indent { padding-left: 22px; color: var(--text-faint); }
+
+    .feature-list { display: flex; flex-direction: column; gap: 18px; }
+    .feature-item { display: flex; gap: 14px; }
+    .feature-item .fi-icon {
+        width: 34px; height: 34px; flex-shrink: 0;
+        border-radius: 9px;
+        background: var(--blue-dim); color: var(--blue);
+        display: flex; align-items: center; justify-content: center;
+    }
+    .feature-item h4 { font-size: 14.5px; margin: 0 0 4px; font-family: var(--font-body); font-weight: 600; }
+    .feature-item p { margin: 0; font-size: 12.5px; color: var(--text-dim); }
+
+    /* ---------- access tiers ---------- */
+    .tiers { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    @media (max-width: 760px) { .tiers { grid-template-columns: 1fr; } }
+    .tier {
+        background: var(--bg-panel);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 24px;
+    }
+    .tier-badge {
+        display: inline-block;
+        font-family: var(--font-mono);
+        font-size: 10.5px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        padding: 3px 10px;
+        border-radius: 100px;
+        margin-bottom: 14px;
+    }
+    .tier.admin .tier-badge { background: var(--red-dim); color: var(--red); }
+    .tier.operator .tier-badge { background: var(--amber-dim); color: var(--amber); }
+    .tier.viewer .tier-badge { background: var(--green-dim); color: var(--green); }
+    .tier h3 { font-size: 18px; margin-bottom: 14px; }
+    .tier ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+    .tier li { font-size: 13px; color: var(--text-dim); display: flex; gap: 9px; align-items: flex-start; }
+    .tier li .mark { font-family: var(--font-mono); flex-shrink: 0; width: 14px; }
+    .tier li.yes .mark { color: var(--green); }
+    .tier li.no { color: var(--text-faint); }
+    .tier li.no .mark { color: var(--text-faint); }
+
+    /* ---------- ecosystem ---------- */
+    .device-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 32px; }
+    @media (max-width: 760px) { .device-row { grid-template-columns: 1fr; } }
+    .device-card {
+        background: var(--bg-panel);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 22px;
+    }
+    .device-icon {
+        width: 38px; height: 38px;
+        border-radius: 9px;
+        background: var(--blue-dim); color: var(--blue);
+        display: flex; align-items: center; justify-content: center;
+        margin-bottom: 14px;
+    }
+    .device-card h3 { font-size: 15.5px; margin-bottom: 6px; }
+    .device-card p { font-size: 12.5px; color: var(--text-dim); margin: 0; }
+
+    .flow-strip {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 10px;
+        font-family: var(--font-mono);
+        font-size: 11.5px;
+        color: var(--text-dim);
+        background: var(--bg-panel);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 16px 18px;
+    }
+    .flow-strip .seg { padding: 4px 10px; border-radius: 6px; background: #1c2740; }
+    .flow-strip .arrow { color: var(--text-faint); }
+
+    /* ---------- footer cta ---------- */
+    .cta-panel {
+        background: linear-gradient(135deg, var(--bg-panel), var(--bg-panel-2));
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 46px;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+    }
+    .cta-panel h2 { font-size: clamp(22px, 3.2vw, 30px); margin-bottom: 12px; }
+    .cta-panel p { color: var(--text-dim); max-width: 46ch; margin: 0 auto 26px; }
+    .cta-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+
+    footer.site {
+        border-top: 1px solid var(--line);
+        padding: 28px 0;
+        margin-top: 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 12px;
+        font-size: 12px;
+        color: var(--text-faint);
+        font-family: var(--font-mono);
+    }
+    footer.site .badge {
+        background: var(--yellow-dim);
+        color: var(--yellow);
+        padding: 3px 10px;
+        border-radius: 100px;
+        letter-spacing: 0.06em;
+    }
+
+    ::selection { background: var(--yellow); color: #1a1305; }
+</style>
+</head>
+<body>
+
+<header class="site">
+    <div class="wrap nav">
+        <div class="brand"><span class="brand-badge">AI</span> ANPR</div>
+        <nav class="nav-links">
+            <a href="#how">How it works</a>
+            <a href="#modules">Modules</a>
+            <a href="#console">Admin console</a>
+            <a href="#access">Access levels</a>
+            <a href="#ecosystem">Ecosystem</a>
+        </nav>
+        <a class="btn ghost" href="#cta" style="padding:8px 16px;">Request a demo</a>
+    </div>
+</header>
+
+<main>
+    <div class="wrap hero">
+        <div>
+            <div class="eyebrow">Software Development Project · Intelligent Traffic Systems</div>
+            <h1>Every plate <span class="hl">read</span>.<br />Every road, aware.</h1>
+            <p class="lede">AI-powered vehicle number plate detection &amp; alert system — captures plates from cameras across the road network, reads them with OCR, matches owners in the database, and acts on policy in real time.</p>
+            <div class="hero-ctas">
+                <a class="btn primary" href="#cta">Request a demo</a>
+                <a class="btn ghost" href="#how">See how it works ↓</a>
+            </div>
+            <div class="stat-row">
+                <div class="stat"><b>&lt; 1 sec</b><span>Plate to owner lookup</span></div>
+                <div class="stat"><b>24 × 7</b><span>Automated monitoring</span></div>
+                <div class="stat"><b>3 tiers</b><span>Admin access levels</span></div>
+            </div>
+        </div>
+
+        <div class="capture-panel">
+            <div class="bar"><span></span><span></span><span></span><em>live-capture-feed.log</em></div>
+            <div class="feed" id="feed"></div>
+            <div class="foot"><span>96 cameras streaming</span><span id="clock">—</span></div>
+        </div>
+    </div>
+
+    <div class="lane-divider"></div>
+
+    <section id="how">
+        <div class="wrap">
+            <div class="section-head">
+                <div class="eyebrow">How it works</div>
+                <h2>From lens to action in five steps</h2>
+                <p>A continuous pipeline connects field devices to the central server — every detection becomes owner information, and every policy match becomes an action.</p>
+            </div>
+            <div class="pipeline">
+                <div class="pipe-step">
+                    <div class="num">01</div>
+                    <div class="pipe-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"></path><rect x="1" y="5" width="15" height="14" rx="2"></rect></svg>
+                    </div>
+                    <h3>Capture</h3>
+                    <p>Endpoint cameras, mobile cameras and other devices photograph passing vehicles.</p>
+                </div>
+                <div class="pipe-step">
+                    <div class="num">02</div>
+                    <div class="pipe-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 012-2h2M17 3h2a2 2 0 012 2v2M21 17v2a2 2 0 01-2 2h-2M7 21H5a2 2 0 01-2-2v-2"></path></svg>
+                    </div>
+                    <h3>Detect &amp; read</h3>
+                    <p>AI locates the plate in the frame; OCR reads the number, day or night.</p>
+                </div>
+                <div class="pipe-step">
+                    <div class="num">03</div>
+                    <div class="pipe-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
+                    </div>
+                    <h3>Match owner</h3>
+                    <p>The number is matched in the database to retrieve owner &amp; registration details.</p>
+                </div>
+                <div class="pipe-step">
+                    <div class="num">04</div>
+                    <div class="pipe-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                    </div>
+                    <h3>Check policies</h3>
+                    <p>Rogue lists, insurance, expiry dates, toll rules and emergency status are checked.</p>
+                </div>
+                <div class="pipe-step">
+                    <div class="num">05</div>
+                    <div class="pipe-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 01-3.46 0"></path></svg>
+                    </div>
+                    <h3>Alert &amp; act</h3>
+                    <p>Alerts fire, notices go out, signals change, tolls reconcile — automatically.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="lane-divider"></div>
+
+    <section id="modules">
+        <div class="wrap">
+            <div class="section-head">
+                <div class="eyebrow">Core capabilities</div>
+                <h2>Four modules, colour-coded like the road itself</h2>
+                <p>Red for threats · amber for compliance · green for emergencies · blue for infrastructure — each maps to a policy the admin controls.</p>
+            </div>
+            <div class="modules">
+                <div class="module-card red">
+                    <div class="module-icon">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                    </div>
+                    <div class="eyebrow-sm">Rogue plate alerts</div>
+                    <h3>Flag criminal &amp; wanted vehicles</h3>
+                    <p>Admins maintain a watchlist of criminal / rogue plates. Any camera that reads a listed plate triggers an instant alert with location, time and captured evidence.</p>
+                </div>
+                <div class="module-card amber">
+                    <div class="module-icon">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="9" y1="15" x2="15" y2="15"></line><line x1="9" y1="11" x2="12" y2="11"></line></svg>
+                    </div>
+                    <div class="eyebrow-sm">Compliance &amp; notifications</div>
+                    <h3>Insurance &amp; expiry verification</h3>
+                    <p>Configurable checks verify insurance status and registration / permit expiry as vehicles pass. Owners and drivers get automatic notifications before documents lapse.</p>
+                </div>
+                <div class="module-card green">
+                    <div class="module-icon">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17h2l2-6h10l2 6h2M5 17v3h2v-3M17 17v3h2v-3"></path><circle cx="7.5" cy="17.5" r="1.5"></circle><circle cx="16.5" cy="17.5" r="1.5"></circle></svg>
+                    </div>
+                    <div class="eyebrow-sm">Green corridor</div>
+                    <h3>Priority for emergency vehicles</h3>
+                    <p>Registered ambulances and emergency vehicles get automatic green signals when on duty. Drivers toggle duty mode in a linked mobile app connected to the server.</p>
+                </div>
+                <div class="module-card blue">
+                    <div class="module-icon">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21V8l9-5 9 5v13"></path><path d="M3 21h18M9 21v-6h6v6"></path></svg>
+                    </div>
+                    <div class="eyebrow-sm">Toll integration</div>
+                    <h3>Works at toll-collecting nakas</h3>
+                    <p>The same detection pipeline plugs into toll plazas — identifying vehicles at the barrier, supporting collection workflows and applying every policy check at the naka.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="lane-divider"></div>
+
+    <section id="console">
+        <div class="wrap">
+            <div class="section-head">
+                <div class="eyebrow">Admin console</div>
+                <h2>One console to configure it all</h2>
+                <p>Policies, watchlists, emergency fleets, toll rules and notifications — managed centrally, with an AI that reads the day's logs for you.</p>
+            </div>
+            <div class="console-grid">
+                <div class="terminal">
+                    <div class="bar"><span></span><span></span><span></span><em>admin-console — AI daily summary</em></div>
+                    <div class="body">
+                        <div class="comment">// Generated 17 Jul 2026, 21:00 IST</div>
+                        <div>▸ 41,203 plates read across 96 cameras</div>
+                        <div class="l-red">▸ 3 rogue-plate alerts — 2 confirmed, 1 dismissed</div>
+                        <div class="indent">KA05··1289 · Silk Board Jn · 14:22</div>
+                        <div class="l-amber">▸ 318 expiry notices sent (insurance 204, permit 114)</div>
+                        <div class="l-green">▸ 27 green corridors granted to on-duty ambulances</div>
+                        <div class="l-blue">▸ Toll naka NH-44: 8,912 vehicles reconciled</div>
+                        <div class="comment">▸ Full logs — filter by camera, plate or event</div>
+                    </div>
+                </div>
+                <div class="feature-list">
+                    <div class="feature-item">
+                        <div class="fi-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg></div>
+                        <div><h4>Policy configuration</h4><p>Define what each camera and naka checks, and what happens on a match.</p></div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="fi-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="5"></circle><path d="M20 21a8 8 0 10-16 0"></path></svg></div>
+                        <div><h4>Watchlist management</h4><p>Add or remove criminal / rogue plates that trigger instant alerts.</p></div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="fi-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17h2l2-6h10l2 6h2"></path><circle cx="7.5" cy="17.5" r="1.5"></circle><circle cx="16.5" cy="17.5" r="1.5"></circle></svg></div>
+                        <div><h4>Emergency fleet registry</h4><p>Register ambulances &amp; service vehicles for automatic signal priority.</p></div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="fi-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"></rect><circle cx="12" cy="16" r="1.6"></circle><path d="M7 11V7a5 5 0 0110 0v4"></path></svg></div>
+                        <div><h4>AI summaries &amp; logs</h4><p>An AI-generated digest of the day, backed by full searchable logs.</p></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="lane-divider"></div>
+
+    <section id="access">
+        <div class="wrap">
+            <div class="section-head">
+                <div class="eyebrow">Access control</div>
+                <h2>Three levels of admin access</h2>
+                <p>Every console action is governed by role — the right people can act, and everyone else can see.</p>
+            </div>
+            <div class="tiers">
+                <div class="tier admin">
+                    <span class="tier-badge">Full access</span>
+                    <h3>Administrator</h3>
+                    <ul>
+                        <li class="yes"><span class="mark">✓</span> Configure all policies &amp; devices</li>
+                        <li class="yes"><span class="mark">✓</span> Manage watchlists &amp; fleets</li>
+                        <li class="yes"><span class="mark">✓</span> Manage users and roles</li>
+                        <li class="yes"><span class="mark">✓</span> View summaries &amp; full logs</li>
+                    </ul>
+                </div>
+                <div class="tier operator">
+                    <span class="tier-badge">Write</span>
+                    <h3>Operator</h3>
+                    <ul>
+                        <li class="yes"><span class="mark">✓</span> Add / edit watchlist entries</li>
+                        <li class="yes"><span class="mark">✓</span> Update policies &amp; settings</li>
+                        <li class="yes"><span class="mark">✓</span> View summaries &amp; full logs</li>
+                        <li class="no"><span class="mark">✕</span> Manage users and roles</li>
+                    </ul>
+                </div>
+                <div class="tier viewer">
+                    <span class="tier-badge">Reader</span>
+                    <h3>Viewer</h3>
+                    <ul>
+                        <li class="yes"><span class="mark">✓</span> View dashboards &amp; alerts</li>
+                        <li class="yes"><span class="mark">✓</span> View AI daily summaries</li>
+                        <li class="yes"><span class="mark">✓</span> View logs (read-only)</li>
+                        <li class="no"><span class="mark">✕</span> Change any configuration</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="lane-divider"></div>
+
+    <section id="ecosystem">
+        <div class="wrap">
+            <div class="section-head">
+                <div class="eyebrow">The connected ecosystem</div>
+                <h2>Devices on the road, one server behind them</h2>
+                <p>Fixed and mobile capture points stream to the central server; the driver app closes the loop for emergency fleets.</p>
+            </div>
+            <div class="device-row">
+                <div class="device-card">
+                    <div class="device-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"></path><rect x="1" y="5" width="15" height="14" rx="2"></rect></svg></div>
+                    <h3>Endpoint cameras</h3>
+                    <p>Fixed cameras on gantries, junctions and toll nakas capture continuously and stream detections to the server.</p>
+                </div>
+                <div class="device-card">
+                    <div class="device-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 10l4.55-2.27A1 1 0 0121 8.6v6.8a1 1 0 01-1.45.9L15 14M5 6h9a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2z"></path></svg></div>
+                    <h3>Mobile cameras</h3>
+                    <p>Patrol vehicles and handheld devices extend coverage anywhere — the same OCR and policy checks, on the move.</p>
+                </div>
+                <div class="device-card">
+                    <div class="device-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg></div>
+                    <h3>Driver duty app</h3>
+                    <p>Emergency drivers switch duty mode on and off; the server grants green signals only when it matters.</p>
+                </div>
+            </div>
+            <div class="flow-strip">
+                <span class="seg">Endpoint cameras</span><span class="arrow">·</span><span class="seg">Mobile cameras</span><span class="arrow">·</span><span class="seg">Driver app</span>
+                <span class="arrow">→</span><span class="seg">Central server</span>
+                <span class="arrow">→</span><span class="seg">Policy engine</span>
+                <span class="arrow">→</span><span class="seg">Alerts</span><span class="arrow">·</span><span class="seg">Signals</span><span class="arrow">·</span><span class="seg">Notices</span>
+            </div>
+        </div>
+    </section>
+
+    <div class="lane-divider"></div>
+
+    <section id="cta">
+        <div class="wrap">
+            <div class="cta-panel">
+                <h2>See the full pipeline on your own road network</h2>
+                <p>From lens to action in five steps — request a walkthrough of detection, policy checks and the admin console.</p>
+                <div class="cta-actions">
+                    <a class="btn primary" href="mailto:hello@example-anpr-demo.test">Request a demo</a>
+                    <a class="btn ghost" href="#how">Review the pipeline</a>
+                </div>
+            </div>
+        </div>
+    </section>
+</main>
+
+<footer class="site">
+    <div class="wrap" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; width:100%;">
+        <span>© 2026 ANPR Detection System — demo project, fictional data</span>
+        <span class="badge">AI · ANPR · 2026</span>
+    </div>
+</footer>
+
+<script>
+    // Fictional, client-side-only ticker of "live" plate captures — purely illustrative.
+    const STATE_CODES = ['KA','MH','DL','TN','TS','GJ','RJ','UP','WB','PB'];
+    const LOCATIONS = ['Silk Board Jn','Hebbal Flyover','MG Road Jn','Electronic City Toll','Anna Salai','Connaught Place','Whitefield Main Rd','NH-44 Km 112'];
+    const LETTERS = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+
+    function randomPlate() {
+        const state = STATE_CODES[Math.floor(Math.random() * STATE_CODES.length)];
+        const rto = String(Math.floor(Math.random() * 60) + 1).padStart(2, '0');
+        const series = LETTERS[Math.floor(Math.random() * LETTERS.length)] + LETTERS[Math.floor(Math.random() * LETTERS.length)];
+        const num = String(Math.floor(Math.random() * 9999) + 1).padStart(4, '0');
+        return `${state}${rto}${series}${num}`;
+    }
+
+    const feed = document.getElementById('feed');
+    const ROWS_VISIBLE = 6;
+
+    function addRow() {
+        const flagged = Math.random() < 0.12;
+        const row = document.createElement('div');
+        row.className = 'plate-row' + (flagged ? ' match' : '');
+        row.innerHTML = `
+            <span class="plate-chip">${randomPlate()}</span>
+            <span class="loc">${LOCATIONS[Math.floor(Math.random() * LOCATIONS.length)]}</span>
+            <span class="tag ${flagged ? 'flag' : 'ok'}">${flagged ? 'Watchlist hit' : 'Matched'}</span>
+        `;
+        feed.insertBefore(row, feed.firstChild);
+        while (feed.children.length > ROWS_VISIBLE) {
+            feed.removeChild(feed.lastChild);
+        }
+    }
+
+    for (let i = 0; i < ROWS_VISIBLE; i++) addRow();
+    const ticking = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? null : setInterval(addRow, 1700);
+
+    function updateClock() {
+        const el = document.getElementById('clock');
+        if (el) el.textContent = new Date().toLocaleTimeString('en-IN', { hour12: false });
+    }
+    updateClock();
+    setInterval(updateClock, 1000);
+</script>
+
+</body>
+</html>
