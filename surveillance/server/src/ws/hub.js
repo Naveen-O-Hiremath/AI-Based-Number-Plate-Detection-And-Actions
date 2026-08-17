@@ -1,9 +1,11 @@
 import { WebSocketServer, WebSocket } from 'ws';
 
-let wss = null;
+// The app listens on both HTTP and HTTPS, so more than one WebSocketServer can
+// be attached. Broadcasts must reach clients on every one of them.
+const servers = [];
 
 export function attachWebSocket(httpServer) {
-    wss = new WebSocketServer({ server: httpServer, path: '/ws' });
+    const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
 
     wss.on('connection', (socket) => {
         socket.isAlive = true;
@@ -21,20 +23,22 @@ export function attachWebSocket(httpServer) {
     }, 30000);
     wss.on('close', () => clearInterval(interval));
 
+    servers.push(wss);
     return wss;
 }
 
-/** Push an event to every connected admin dashboard. */
+/** Push an event to every connected admin dashboard, across all listeners. */
 export function broadcast(type, payload) {
-    if (!wss) return 0;
     const message = JSON.stringify({ type, payload, at: new Date().toISOString() });
     let sent = 0;
-    for (const socket of wss.clients) {
-        if (socket.readyState === WebSocket.OPEN) { socket.send(message); sent++; }
+    for (const wss of servers) {
+        for (const socket of wss.clients) {
+            if (socket.readyState === WebSocket.OPEN) { socket.send(message); sent++; }
+        }
     }
     return sent;
 }
 
 export function clientCount() {
-    return wss ? wss.clients.size : 0;
+    return servers.reduce((total, wss) => total + wss.clients.size, 0);
 }
