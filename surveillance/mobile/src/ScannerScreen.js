@@ -3,9 +3,36 @@ import {
     View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, ScrollView, Switch, Vibration, TextInput,
 } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import * as ImageManipulator from 'expo-image-manipulator';
 import { sendDetection, STATUS_COLORS } from './api';
 
 const AUTO_INTERVAL_MS = 2000;
+
+// Fraction of the captured frame kept around the centre — must approximate the
+// on-screen dashed guide box. Sending the full frame lets background text
+// (signage, screens, paperwork) dominate OCR and produce garbage reads.
+const CROP = { width: 0.82, height: 0.42 };
+
+/**
+ * Crops the photo to the guide region and upscales it. OCR accuracy depends far
+ * more on the plate filling the image than on raw camera resolution.
+ */
+async function cropToGuide(photo) {
+    const cropWidth = Math.round(photo.width * CROP.width);
+    const cropHeight = Math.round(photo.height * CROP.height);
+    const originX = Math.round((photo.width - cropWidth) / 2);
+    const originY = Math.round((photo.height - cropHeight) / 2);
+
+    const result = await ImageManipulator.manipulateAsync(
+        photo.uri,
+        [
+            { crop: { originX, originY, width: cropWidth, height: cropHeight } },
+            { resize: { width: 1600 } },
+        ],
+        { compress: 0.9, format: ImageManipulator.SaveFormat.JPEG, base64: true }
+    );
+    return result.base64;
+}
 
 export default function ScannerScreen({ config, onReconfigure }) {
     const [permission, requestPermission] = useCameraPermissions();
@@ -30,10 +57,10 @@ export default function ScannerScreen({ config, onReconfigure }) {
             let base64Image = null;
             if (!plateOverride) {
                 if (!cameraRef.current) throw new Error('Camera not ready');
-                const photo = await cameraRef.current.takePictureAsync({
-                    base64: true, quality: 0.7, skipProcessing: true,
-                });
-                base64Image = photo.base64;
+                // skipProcessing is deliberately off: it can return an unrotated
+                // frame on some devices, which breaks OCR outright.
+                const photo = await cameraRef.current.takePictureAsync({ quality: 0.9 });
+                base64Image = await cropToGuide(photo);
             }
 
             const data = await sendDetection({
