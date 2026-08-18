@@ -1,0 +1,1249 @@
+<title>ANPR Surveillance Runbook</title>
+<style>
+    :root {
+        --ground: #f6f7f9;
+        --surface: #ffffff;
+        --surface-2: #eef1f5;
+        --line: #d9dee6;
+        --line-soft: #e7ebf1;
+        --text: #1b2430;
+        --muted: #5b6675;
+        --faint: #8b94a3;
+        --accent: #a86a08;
+        --accent-bright: #f0b429;
+        --accent-soft: #fdf3dc;
+        --danger: #b4342a;
+        --danger-soft: #fbeae8;
+        --ok: #0f6e62;
+        --ok-soft: #e3f3f0;
+        --code-bg: #131c27;
+        --code-text: #e4e9f0;
+        --code-line: #26313f;
+
+        --max: 1180px;
+        --col: 760px;
+        --f-head: 'Bahnschrift', 'DIN Alternate', 'Segoe UI Semibold', 'Helvetica Neue', system-ui, sans-serif;
+        --f-body: 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', sans-serif;
+        --f-mono: 'Cascadia Code', 'Cascadia Mono', Consolas, 'SF Mono', Menlo, monospace;
+    }
+
+    @media (prefers-color-scheme: dark) {
+        :root:not([data-theme="light"]) {
+            --ground: #0f1620;
+            --surface: #161f2b;
+            --surface-2: #1c2734;
+            --line: #2b3746;
+            --line-soft: #222d3a;
+            --text: #e3e8ef;
+            --muted: #9aa5b4;
+            --faint: #6f7b8b;
+            --accent: #f0b429;
+            --accent-bright: #f0b429;
+            --accent-soft: #2e2410;
+            --danger: #f08a80;
+            --danger-soft: #2f1a18;
+            --ok: #5cc9b8;
+            --ok-soft: #122a27;
+            --code-bg: #0b121b;
+            --code-text: #e4e9f0;
+            --code-line: #1e2836;
+        }
+    }
+
+    :root[data-theme="dark"] {
+        --ground: #0f1620;
+        --surface: #161f2b;
+        --surface-2: #1c2734;
+        --line: #2b3746;
+        --line-soft: #222d3a;
+        --text: #e3e8ef;
+        --muted: #9aa5b4;
+        --faint: #6f7b8b;
+        --accent: #f0b429;
+        --accent-bright: #f0b429;
+        --accent-soft: #2e2410;
+        --danger: #f08a80;
+        --danger-soft: #2f1a18;
+        --ok: #5cc9b8;
+        --ok-soft: #122a27;
+        --code-bg: #0b121b;
+        --code-text: #e4e9f0;
+        --code-line: #1e2836;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; scroll-padding-top: 24px; }
+
+    body {
+        margin: 0;
+        background: var(--ground);
+        color: var(--text);
+        font-family: var(--f-body);
+        font-size: 16px;
+        line-height: 1.65;
+        -webkit-font-smoothing: antialiased;
+    }
+
+    .shell {
+        max-width: var(--max);
+        margin: 0 auto;
+        padding: 0 28px 96px;
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 40px;
+    }
+    @media (min-width: 1040px) {
+        .shell { grid-template-columns: 232px minmax(0, 1fr); align-items: start; }
+    }
+
+    /* ---------- masthead ---------- */
+    header.top {
+        grid-column: 1 / -1;
+        padding: 56px 0 28px;
+        border-bottom: 3px solid var(--text);
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-end;
+        gap: 20px;
+    }
+    .eyebrow {
+        font-family: var(--f-mono);
+        font-size: 11.5px;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: var(--accent);
+        margin-bottom: 10px;
+    }
+    h1 {
+        font-family: var(--f-head);
+        font-size: clamp(34px, 5.2vw, 52px);
+        line-height: 1.02;
+        letter-spacing: -0.005em;
+        margin: 0;
+        text-wrap: balance;
+        flex: 1 1 340px;
+    }
+    .standfirst {
+        color: var(--muted);
+        font-size: 15px;
+        max-width: 52ch;
+        margin: 14px 0 0;
+    }
+    .stamp {
+        font-family: var(--f-mono);
+        font-size: 11px;
+        color: var(--faint);
+        line-height: 1.9;
+        border-left: 2px solid var(--line);
+        padding-left: 14px;
+    }
+    .stamp b { color: var(--text); font-weight: 600; }
+
+    /* ---------- phase index ---------- */
+    nav.index {
+        position: sticky;
+        top: 24px;
+        font-size: 13.5px;
+        display: none;
+    }
+    @media (min-width: 1040px) { nav.index { display: block; } }
+    nav.index .label {
+        font-family: var(--f-mono);
+        font-size: 10.5px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--faint);
+        padding-bottom: 10px;
+        border-bottom: 1px solid var(--line);
+        margin-bottom: 10px;
+    }
+    nav.index a {
+        display: block;
+        padding: 5px 0 5px 12px;
+        color: var(--muted);
+        text-decoration: none;
+        border-left: 2px solid transparent;
+    }
+    nav.index a:hover { color: var(--text); border-left-color: var(--accent-bright); }
+    nav.index a.sub { padding-left: 24px; font-size: 12.5px; color: var(--faint); }
+
+    main { min-width: 0; max-width: var(--col); }
+
+    /* ---------- sections ---------- */
+    section { padding-top: 44px; }
+    section + section { border-top: 1px solid var(--line-soft); }
+
+    h2 {
+        font-family: var(--f-head);
+        font-size: 27px;
+        letter-spacing: -0.003em;
+        margin: 0 0 6px;
+        text-wrap: balance;
+        display: flex;
+        align-items: baseline;
+        gap: 12px;
+    }
+    h2 .num {
+        font-family: var(--f-mono);
+        font-size: 13px;
+        color: var(--accent);
+        flex: none;
+    }
+    h3 {
+        font-family: var(--f-head);
+        font-size: 18.5px;
+        margin: 32px 0 8px;
+        text-wrap: balance;
+    }
+    h4 {
+        font-size: 14px;
+        font-weight: 650;
+        margin: 22px 0 6px;
+        color: var(--text);
+    }
+    p { margin: 0 0 14px; max-width: 68ch; }
+    ul, ol { margin: 0 0 14px; padding-left: 22px; max-width: 66ch; }
+    li { margin-bottom: 6px; }
+    a { color: var(--accent); }
+    strong { font-weight: 650; }
+    code {
+        font-family: var(--f-mono);
+        font-size: 0.875em;
+        background: var(--surface-2);
+        border: 1px solid var(--line-soft);
+        border-radius: 4px;
+        padding: 1px 5px;
+    }
+
+    /* ---------- code blocks ---------- */
+    .code {
+        position: relative;
+        background: var(--code-bg);
+        border: 1px solid var(--code-line);
+        border-radius: 8px;
+        margin: 0 0 18px;
+        overflow: hidden;
+    }
+    .code-head {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 7px 12px;
+        border-bottom: 1px solid var(--code-line);
+        background: rgba(255, 255, 255, 0.03);
+    }
+    .code-head .where {
+        font-family: var(--f-mono);
+        font-size: 10.5px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #8b98a9;
+    }
+    .code-head button {
+        margin-left: auto;
+        font-family: var(--f-body);
+        font-size: 11.5px;
+        cursor: pointer;
+        background: transparent;
+        border: 1px solid #37455a;
+        color: #b9c4d2;
+        border-radius: 5px;
+        padding: 3px 10px;
+    }
+    .code-head button:hover { background: #1d2836; color: #fff; }
+    .code-head button:focus-visible { outline: 2px solid var(--accent-bright); outline-offset: 1px; }
+    .code pre {
+        margin: 0;
+        padding: 13px 14px;
+        overflow-x: auto;
+        font-family: var(--f-mono);
+        font-size: 12.9px;
+        line-height: 1.62;
+        color: var(--code-text);
+        tab-size: 2;
+    }
+    .code pre .c { color: #7f8ea3; }
+    .code pre .k { color: var(--accent-bright); }
+
+    /* ---------- callouts ---------- */
+    .note {
+        border-left: 3px solid var(--accent-bright);
+        background: var(--accent-soft);
+        border-radius: 0 7px 7px 0;
+        padding: 12px 16px;
+        margin: 0 0 18px;
+        font-size: 14.5px;
+    }
+    .note.warn { border-left-color: var(--danger); background: var(--danger-soft); }
+    .note.ok { border-left-color: var(--ok); background: var(--ok-soft); }
+    .note p:last-child { margin-bottom: 0; }
+    .note .tag {
+        font-family: var(--f-mono);
+        font-size: 10.5px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        display: block;
+        margin-bottom: 4px;
+        color: var(--accent);
+    }
+    .note.warn .tag { color: var(--danger); }
+    .note.ok .tag { color: var(--ok); }
+
+    /* ---------- tables ---------- */
+    .tw { overflow-x: auto; margin: 0 0 18px; }
+    table { border-collapse: collapse; width: 100%; font-size: 14px; min-width: 460px; }
+    th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
+    th {
+        font-family: var(--f-mono);
+        font-size: 10.5px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--faint);
+        border-bottom: 1px solid var(--line);
+    }
+    td code { background: transparent; border: none; padding: 0; }
+    tbody tr:last-child td { border-bottom: none; }
+    .num-col { font-variant-numeric: tabular-nums; }
+
+    /* ---------- status pills ---------- */
+    .pill {
+        display: inline-block;
+        font-family: var(--f-mono);
+        font-size: 10px;
+        letter-spacing: 0.06em;
+        padding: 2px 7px;
+        border-radius: 100px;
+        white-space: nowrap;
+    }
+    .pill.normal { background: var(--ok-soft); color: var(--ok); }
+    .pill.watch { background: var(--accent-soft); color: var(--accent); }
+    .pill.wanted { background: var(--danger-soft); color: var(--danger); }
+
+    /* ---------- architecture diagram ---------- */
+    .arch {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 18px;
+        margin: 0 0 18px;
+        overflow-x: auto;
+    }
+    .arch svg { display: block; min-width: 560px; width: 100%; height: auto; }
+
+    /* ---------- file tree ---------- */
+    .tree {
+        font-family: var(--f-mono);
+        font-size: 12.6px;
+        line-height: 1.75;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 14px 16px;
+        overflow-x: auto;
+        margin: 0 0 18px;
+        white-space: pre;
+        color: var(--muted);
+    }
+    .tree b { color: var(--text); font-weight: 600; }
+    .tree i { color: var(--faint); font-style: normal; }
+
+    footer.end {
+        grid-column: 1 / -1;
+        margin-top: 56px;
+        padding-top: 18px;
+        border-top: 1px solid var(--line);
+        font-family: var(--f-mono);
+        font-size: 11.5px;
+        color: var(--faint);
+        display: flex;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        html { scroll-behavior: auto; }
+        * { transition: none !important; animation: none !important; }
+    }
+</style>
+
+<div class="shell">
+    <header class="top">
+        <div style="flex:1 1 340px;">
+            <div class="eyebrow">Deployment &amp; Operations Guide</div>
+            <h1>ANPR Surveillance Runbook</h1>
+            <p class="standfirst">
+                Everything needed to build, configure and run the AI number-plate recognition
+                and surveillance-alert system on a new machine — backend, control-room dashboard,
+                and the Android edge-camera app.
+            </p>
+        </div>
+        <div class="stamp">
+            <b>Stack</b><br />
+            Node 22 · Express · SQLite<br />
+            React · Vite · Tailwind<br />
+            React Native · Expo 52<br />
+            Claude Vision · Tesseract<br />
+            <b>Verified on</b><br />
+            Windows 11 · Docker 29.5<br />
+            Redmi Note 10 · Android 12
+        </div>
+    </header>
+
+    <nav class="index">
+        <div class="label">Contents</div>
+        <a href="#what">What you're deploying</a>
+        <a href="#prereq">1 · Prerequisites</a>
+        <a href="#backend">2 · Backend &amp; dashboard</a>
+        <a href="#vision">3 · Enable Claude Vision</a>
+        <a href="#network">4 · Phone connectivity</a>
+        <a href="#browser">5 · Browser scanner</a>
+        <a href="#android">6 · Build the Android app</a>
+        <a href="#testing">7 · Test the system</a>
+        <a href="#local">8 · Run without Docker</a>
+        <a href="#api">API reference</a>
+        <a href="#schema">Database schema</a>
+        <a href="#trouble">Troubleshooting</a>
+        <a href="#structure">Project structure</a>
+    </nav>
+
+    <main>
+        <!-- ============ OVERVIEW ============ -->
+        <section id="what" style="padding-top:36px;">
+            <h2>What you're deploying</h2>
+            <p>
+                A phone acts as an edge camera node. It captures a number plate and posts the frame to a
+                local server, which reads the plate with <strong>Claude Vision</strong> (falling back to
+                local <strong>Tesseract</strong> OCR), matches it against a vehicle registry, applies
+                policy, and pushes the result to a control-room dashboard over WebSockets — firing an
+                audible and visual alarm when a wanted vehicle appears.
+            </p>
+
+            <div class="arch">
+                <svg viewBox="0 0 620 200" role="img" aria-label="Edge camera posts frames to the backend, which runs OCR, matches the registry, and broadcasts to the dashboard.">
+                    <defs>
+                        <marker id="ah" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+                            <path d="M0,1 L7,4 L0,7 Z" fill="currentColor" />
+                        </marker>
+                    </defs>
+                    <g fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.5" color="currentColor">
+                        <line x1="132" y1="70" x2="215" y2="70" marker-end="url(#ah)" />
+                        <line x1="215" y1="104" x2="132" y2="104" marker-end="url(#ah)" />
+                        <line x1="440" y1="86" x2="505" y2="86" marker-end="url(#ah)" />
+                    </g>
+                    <g font-family="Consolas, monospace" font-size="9.5" fill="currentColor" opacity="0.65">
+                        <text x="140" y="63">base64 frame</text>
+                        <text x="140" y="122">plate · owner · fines · alert</text>
+                        <text x="446" y="79">WebSocket</text>
+                    </g>
+                    <g stroke="currentColor" stroke-width="1.4" fill="none">
+                        <rect x="8" y="52" width="124" height="70" rx="7" />
+                        <rect x="215" y="30" width="225" height="140" rx="7" />
+                        <rect x="505" y="52" width="107" height="70" rx="7" />
+                    </g>
+                    <g stroke="currentColor" stroke-width="1" fill="none" opacity="0.45">
+                        <rect x="231" y="72" width="193" height="30" rx="5" />
+                        <rect x="231" y="112" width="193" height="30" rx="5" />
+                    </g>
+                    <g font-family="Bahnschrift, DIN Alternate, sans-serif" font-size="12" fill="currentColor">
+                        <text x="70" y="82" text-anchor="middle">Edge camera</text>
+                        <text x="327" y="55" text-anchor="middle">Backend server</text>
+                        <text x="558" y="82" text-anchor="middle">Dashboard</text>
+                    </g>
+                    <g font-family="Consolas, monospace" font-size="9" fill="currentColor" opacity="0.7">
+                        <text x="70" y="98" text-anchor="middle">phone / app</text>
+                        <text x="327" y="91" text-anchor="middle">Claude Vision → Tesseract</text>
+                        <text x="327" y="131" text-anchor="middle">registry match → policy</text>
+                        <text x="558" y="98" text-anchor="middle">live alerts</text>
+                    </g>
+                </svg>
+            </div>
+
+            <h3>Two independent stacks</h3>
+            <p>The repository contains two systems that run side by side:</p>
+            <div class="tw">
+                <table>
+                    <thead>
+                        <tr><th>Stack</th><th>Ports</th><th>What it is</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>surveillance</strong></td>
+                            <td class="num-col"><code>8000</code> / <code>8443</code></td>
+                            <td>The AI surveillance prototype — live dashboard, detection API, WebSocket hub, browser scanner. Pairs with the Android app.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>console</strong></td>
+                            <td class="num-col"><code>4000</code> / <code>4443</code></td>
+                            <td>The ANPR traffic admin console — watchlists, compliance notices, green corridor, toll, role-based logins.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <p>
+                The HTTPS port on each is required only for browser camera access from a phone —
+                browsers block <code>getUserMedia</code> on insecure origins.
+            </p>
+        </section>
+
+        <!-- ============ PREREQUISITES ============ -->
+        <section id="prereq">
+            <h2><span class="num">01</span> Prerequisites</h2>
+            <p>Install these before starting. Versions below are what the build was verified against.</p>
+
+            <div class="tw">
+                <table>
+                    <thead>
+                        <tr><th>Requirement</th><th>Version</th><th>Needed for</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><strong>Docker Desktop</strong></td><td>29.5+</td><td>Running both stacks (recommended path)</td></tr>
+                        <tr><td><strong>Node.js</strong></td><td>22.5 or newer</td><td>Local dev, and building the mobile app</td></tr>
+                        <tr><td><strong>Git</strong></td><td>any</td><td>Cloning the repository</td></tr>
+                        <tr><td>JDK (Temurin)</td><td>17</td><td>Android app only</td></tr>
+                        <tr><td>Android SDK</td><td>build-tools 34+, platform-tools</td><td>Android app only</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="note">
+                <span class="tag">Why Node 22.5</span>
+                <p>
+                    The server uses Node's built-in <code>node:sqlite</code> module, which means
+                    <strong>no native compilation</strong> — no Visual Studio Build Tools, no Python,
+                    no database server to install. Older Node versions do not have this module.
+                </p>
+            </div>
+
+            <h3>Verify the toolchain</h3>
+            <div class="code">
+                <div class="code-head"><span class="where">any shell</span><button type="button" data-copy>Copy</button></div>
+<pre>node --version        <span class="c"># must be v22.5.0 or higher</span>
+docker --version
+docker compose version
+java -version         <span class="c"># Android build only — expect 17.x</span></pre>
+            </div>
+
+            <p>The Android SDK normally installs to this path on Windows. Confirm <code>adb</code> exists:</p>
+            <div class="code">
+                <div class="code-head"><span class="where">powershell</span><button type="button" data-copy>Copy</button></div>
+<pre>Test-Path "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe"</pre>
+            </div>
+        </section>
+
+        <!-- ============ BACKEND ============ -->
+        <section id="backend">
+            <h2><span class="num">02</span> Backend &amp; dashboard</h2>
+            <p>
+                One command builds both stacks, seeds the demo database, and starts everything.
+                Run it from the <strong>repository root</strong>.
+            </p>
+
+            <div class="code">
+                <div class="code-head"><span class="where">repo root</span><button type="button" data-copy>Copy</button></div>
+<pre>git clone &lt;your-repo-url&gt; anpr_detection_system
+cd anpr_detection_system
+
+docker compose up -d</pre>
+            </div>
+
+            <p>
+                First run takes a few minutes — it builds two images and seeds
+                <strong>1,200 vehicles</strong>, fines, camera nodes, movement logs and alerts.
+                Check both came up healthy:
+            </p>
+
+            <div class="code">
+                <div class="code-head"><span class="where">repo root</span><button type="button" data-copy>Copy</button></div>
+<pre>docker compose ps</pre>
+            </div>
+
+            <p>Expect <code>Up (healthy)</code> for both. Then open:</p>
+
+            <div class="tw">
+                <table>
+                    <thead><tr><th>URL</th><th>What it is</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>http://localhost:8000</code></td><td>Surveillance control-room dashboard</td></tr>
+                        <tr><td><code>http://localhost:8000/scan.html</code></td><td>Browser edge scanner</td></tr>
+                        <tr><td><code>http://localhost:8000/plate.html</code></td><td>Test-plate display page</td></tr>
+                        <tr><td><code>http://localhost:4000</code></td><td>ANPR admin console</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3>Console logins</h3>
+            <div class="tw">
+                <table>
+                    <thead><tr><th>Email</th><th>Password</th><th>Role</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>admin@anpr-demo.gov.in</code></td><td><code>admin123</code></td><td>Full access</td></tr>
+                        <tr><td><code>operator@anpr-demo.gov.in</code></td><td><code>operator123</code></td><td>Write</td></tr>
+                        <tr><td><code>viewer@anpr-demo.gov.in</code></td><td><code>viewer123</code></td><td>Read-only</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3>Everyday commands</h3>
+            <div class="code">
+                <div class="code-head"><span class="where">repo root</span><button type="button" data-copy>Copy</button></div>
+<pre>docker compose logs -f surveillance   <span class="c"># follow logs</span>
+docker compose restart surveillance   <span class="c"># restart, data preserved</span>
+docker compose down                   <span class="c"># stop, data preserved</span>
+docker compose down -v                <span class="c"># stop AND wipe databases</span>
+docker compose up -d --build          <span class="c"># rebuild after code changes</span></pre>
+            </div>
+
+            <div class="note ok">
+                <span class="tag">Data persistence</span>
+                <p>
+                    Each stack stores its SQLite database in a named Docker volume. Restarts and rebuilds
+                    never lose data — seeding runs only when the database is missing or empty. To reset to
+                    fresh demo data, use <code>docker compose down -v</code> then <code>up -d</code>.
+                </p>
+            </div>
+        </section>
+
+        <!-- ============ VISION ============ -->
+        <section id="vision">
+            <h2><span class="num">03</span> Enable Claude Vision</h2>
+            <p>
+                The system runs out of the box on local Tesseract OCR. <strong>This is the weakest
+                link</strong> — Tesseract misreads embossed, angled, and hand-lettered plates often.
+                Claude Vision is substantially more accurate and is strongly recommended for real testing.
+            </p>
+
+            <p>Create a <code>.env</code> file <strong>next to <code>docker-compose.yml</code></strong>:</p>
+
+            <div class="code">
+                <div class="code-head"><span class="where">.env — repo root</span><button type="button" data-copy>Copy</button></div>
+<pre><span class="c"># Enables Claude Vision as the primary OCR engine.</span>
+ANTHROPIC_API_KEY=sk-ant-...
+
+<span class="c"># Your PC's LAN IP — needed so phone HTTPS certificates cover it.</span>
+HOST_IP=192.168.1.5</pre>
+            </div>
+
+            <p>Apply it, then confirm which engine is active:</p>
+            <div class="code">
+                <div class="code-head"><span class="where">repo root</span><button type="button" data-copy>Copy</button></div>
+<pre>docker compose up -d --force-recreate
+
+curl http://localhost:8000/api/health</pre>
+            </div>
+
+            <p>
+                The response reports <code>"vision": "claude-vision + tesseract-fallback"</code> when the key
+                is picked up, or <code>"tesseract-only"</code> when it isn't.
+            </p>
+
+            <h3>How the pipeline degrades</h3>
+            <ol>
+                <li><strong>Claude Vision</strong> runs first, returning strict JSON via structured outputs — <code>{"plate_number": "KL07B1234", "confidence": 0.95}</code>.</li>
+                <li>If it fails, errors, or returns confidence below 0.4, the request <strong>falls through to Tesseract</strong> (three preprocessing variants × two segmentation modes).</li>
+                <li>The read is <strong>normalised by plate position</strong> — correcting <code>O↔0</code>, <code>I↔1</code>, <code>S↔5</code>, <code>Z↔2</code> according to whether each slot should hold a letter or a digit.</li>
+                <li>If the plate isn't in the registry, a <strong>fuzzy match</strong> (edit distance ≤ 2) offers the closest registered plates as one-tap suggestions.</li>
+            </ol>
+
+            <div class="note">
+                <span class="tag">No key required</span>
+                <p>
+                    Everything works without an API key — the system simply uses Tesseract for every read.
+                    Add the key later and restart; no rebuild is needed.
+                </p>
+            </div>
+        </section>
+
+        <!-- ============ NETWORK ============ -->
+        <section id="network">
+            <h2><span class="num">04</span> Phone connectivity</h2>
+            <p>
+                Getting the phone to reach the server is the step most likely to fail. There are three
+                ways, in order of convenience.
+            </p>
+
+            <h3>Option A — Wi-Fi (best for field testing)</h3>
+            <p>Phone and PC on the same network. Find your LAN IP:</p>
+            <div class="code">
+                <div class="code-head"><span class="where">powershell</span><button type="button" data-copy>Copy</button></div>
+<pre>ipconfig | Select-String IPv4</pre>
+            </div>
+
+            <div class="note warn">
+                <span class="tag">Windows Firewall will block this by default</span>
+                <p>
+                    Windows blocks inbound connections on networks classified <strong>Public</strong> —
+                    which includes Hyper-V virtual switches, a common surprise. Connections simply time out
+                    with no error. Run once in an <strong>Administrator</strong> PowerShell:
+                </p>
+            </div>
+
+            <div class="code">
+                <div class="code-head"><span class="where">powershell — as administrator</span><button type="button" data-copy>Copy</button></div>
+<pre>New-NetFirewallRule -DisplayName "ANPR" -Direction Inbound `
+  -Protocol TCP -LocalPort 8000,8443 -Action Allow -Profile Any</pre>
+            </div>
+
+            <p>Verify from the phone's browser: <code>http://&lt;your-ip&gt;:8000/api/health</code>.</p>
+
+            <h3>Option B — USB tunnel (no firewall changes)</h3>
+            <p>
+                With the phone plugged in and USB debugging on, forward the ports over the cable.
+                The phone then reaches the server at <code>localhost</code>, bypassing the network entirely.
+            </p>
+            <div class="code">
+                <div class="code-head"><span class="where">any shell</span><button type="button" data-copy>Copy</button></div>
+<pre>adb reverse tcp:8000 tcp:8000
+adb reverse tcp:8443 tcp:8443
+
+<span class="c"># confirm the phone can reach it</span>
+adb shell curl -s http://localhost:8000/api/health</pre>
+            </div>
+            <p>
+                In the app, set the server address to <code>http://localhost:8000</code>.
+                The tunnel drops when you unplug — re-run the commands to restore it.
+            </p>
+
+            <h3>Option C — Everything on the PC</h3>
+            <p>
+                Skip the phone entirely: use the browser scanner at
+                <code>http://localhost:8000/scan.html</code> with a webcam, or type plates into the
+                manual-entry field to exercise the full business logic.
+            </p>
+        </section>
+
+        <!-- ============ BROWSER SCANNER ============ -->
+        <section id="browser">
+            <h2><span class="num">05</span> Browser scanner</h2>
+            <p>
+                The fastest way to scan from a phone — nothing to install. Requires
+                <code>HOST_IP</code> to be set (see step 3) so the certificate covers your address.
+            </p>
+
+            <ol>
+                <li>Put the phone on the <strong>same Wi-Fi</strong> as the PC.</li>
+                <li>Open <code>https://&lt;your-ip&gt;:8443/scan.html</code> — note <strong>https</strong>.</li>
+                <li>Accept the certificate warning once (<em>Advanced → Proceed</em>).</li>
+                <li>Allow camera access, aim at a plate, tap <strong>Capture &amp; Scan</strong>.</li>
+            </ol>
+
+            <div class="note">
+                <span class="tag">Why the certificate warning appears</span>
+                <p>
+                    Browsers only allow camera access on secure origins, so the server generates a
+                    self-signed certificate on first run. The warning is expected and appears once per device.
+                </p>
+            </div>
+
+            <p>
+                The scanner crops to the on-screen guide box before uploading, has a manual plate field,
+                an auto-scan toggle, and a front/back camera flip.
+            </p>
+        </section>
+
+        <!-- ============ ANDROID ============ -->
+        <section id="android">
+            <h2><span class="num">06</span> Build the Android app</h2>
+            <p>
+                This produces a <strong>release APK with the JavaScript bundled in</strong>, so the app
+                runs standalone — no Metro dev server tethered, which matters when walking around with
+                model cars.
+            </p>
+
+            <h3>Install dependencies</h3>
+            <div class="code">
+                <div class="code-head"><span class="where">surveillance/mobile</span><button type="button" data-copy>Copy</button></div>
+<pre>cd surveillance/mobile
+npm install
+
+<span class="c"># verify the project is consistent — expect 18/18 checks passed</span>
+npx expo-doctor</pre>
+            </div>
+
+            <div class="note">
+                <span class="tag">Native modules already declared</span>
+                <p>
+                    The app depends on <code>expo-camera</code>, <code>expo-file-system</code>,
+                    <code>expo-image-manipulator</code>, <code>expo-asset</code>,
+                    <code>expo-system-ui</code> and <code>expo-build-properties</code>. All are in
+                    <code>package.json</code> — <code>npm install</code> is enough. They are each load-bearing:
+                    file-system provides the storage interface the camera writes photos through, and
+                    image-manipulator does the crop that makes OCR usable.
+                </p>
+            </div>
+
+            <h3>Generate the native project</h3>
+            <div class="code">
+                <div class="code-head"><span class="where">surveillance/mobile</span><button type="button" data-copy>Copy</button></div>
+<pre>npx expo prebuild --platform android</pre>
+            </div>
+
+            <h3>Point Gradle at the Android SDK</h3>
+            <div class="code">
+                <div class="code-head"><span class="where">powershell — surveillance/mobile/android</span><button type="button" data-copy>Copy</button></div>
+<pre>cd android
+Set-Content -Path local.properties -Encoding ascii `
+  -Value 'sdk.dir=C:/Users/YOUR_USERNAME/AppData/Local/Android/Sdk'</pre>
+            </div>
+
+            <div class="note warn">
+                <span class="tag">Use forward slashes</span>
+                <p>
+                    <code>local.properties</code> is a Java properties file, where a backslash starts an
+                    escape sequence — <code>C:\Users\...</code> fails to parse and the build dies with
+                    <em>“The filename, directory name, or volume label syntax is incorrect.”</em>
+                    Forward slashes work on Windows and avoid the problem entirely.
+                </p>
+            </div>
+
+            <h3>Build the APK</h3>
+            <div class="code">
+                <div class="code-head"><span class="where">powershell — surveillance/mobile/android</span><button type="button" data-copy>Copy</button></div>
+<pre>$env:ANDROID_HOME = "$env:LOCALAPPDATA\Android\Sdk"
+$env:ANDROID_SDK_ROOT = $env:ANDROID_HOME
+
+.\gradlew.bat assembleRelease --no-daemon</pre>
+            </div>
+
+            <p>
+                First build takes roughly 8–10 minutes (it downloads Gradle and compiles all native
+                modules); later builds are 2–3 minutes. The output lands at:
+            </p>
+            <div class="code">
+                <div class="code-head"><span class="where">path</span><button type="button" data-copy>Copy</button></div>
+<pre>surveillance/mobile/android/app/build/outputs/apk/release/app-release.apk</pre>
+            </div>
+
+            <div class="note warn">
+                <span class="tag">Run Gradle from PowerShell, not Git Bash</span>
+                <p>
+                    Git Bash rewrites Windows paths (MSYS path conversion), which breaks Expo's
+                    autolinking scripts mid-build. PowerShell or CMD avoids this.
+                </p>
+            </div>
+
+            <h3>Install on the device</h3>
+            <p>Enable <strong>Developer options → USB debugging</strong>, plug in, and confirm it's visible:</p>
+            <div class="code">
+                <div class="code-head"><span class="where">any shell</span><button type="button" data-copy>Copy</button></div>
+<pre>adb devices
+
+adb install -r app/build/outputs/apk/release/app-release.apk</pre>
+            </div>
+
+            <div class="note warn">
+                <span class="tag">Xiaomi / Redmi / POCO devices</span>
+                <p>
+                    MIUI blocks ADB installs by default and returns
+                    <code>INSTALL_FAILED_USER_RESTRICTED</code>. Enable
+                    <strong>Developer options → Install via USB</strong> (this requires being signed
+                    into a Mi account). Alternatively, push the APK and tap it in the Files app:
+                </p>
+            </div>
+
+            <div class="code">
+                <div class="code-head"><span class="where">any shell</span><button type="button" data-copy>Copy</button></div>
+<pre>adb push app-release.apk /sdcard/Download/anpr-edge-camera.apk</pre>
+            </div>
+
+            <h3>First launch</h3>
+            <ol>
+                <li>Open <strong>ANPR Edge Camera</strong>.</li>
+                <li>Enter the server address — <code>http://192.168.1.5:8000</code> for Wi-Fi, or
+                    <code>http://localhost:8000</code> when using the USB tunnel.</li>
+                <li>Set a camera node ID (identifies this device in logs and alerts).</li>
+                <li>Tap <strong>Connect</strong>, then grant camera permission.</li>
+            </ol>
+            <p>Both settings persist, so subsequent launches skip straight to the scanner.</p>
+        </section>
+
+        <!-- ============ TESTING ============ -->
+        <section id="testing">
+            <h2><span class="num">07</span> Test the system</h2>
+            <p>
+                The seed data includes five deliberately simple plates — one per business-logic branch —
+                chosen to be easy to hand-letter onto scale-model cars.
+            </p>
+
+            <div class="tw">
+                <table>
+                    <thead><tr><th>Plate</th><th>Status</th><th>Expected result</th></tr></thead>
+                    <tbody>
+                        <tr>
+                            <td><code>KL07B1234</code></td>
+                            <td><span class="pill normal">NORMAL</span></td>
+                            <td>Green card — owner Rajesh Menon, 2 unpaid fines totalling ₹2,000</td>
+                        </tr>
+                        <tr>
+                            <td><code>KA01AB1111</code></td>
+                            <td><span class="pill watch">SURVEILLANCE</span></td>
+                            <td>Amber card, sighting appended to the movement trail</td>
+                        </tr>
+                        <tr>
+                            <td><code>MH12CD2222</code></td>
+                            <td><span class="pill wanted">WANTED</span></td>
+                            <td><strong>Red banner, alarm tone, phone vibration</strong></td>
+                        </tr>
+                        <tr>
+                            <td><code>TN09XY7777</code></td>
+                            <td><span class="pill wanted">WANTED</span></td>
+                            <td>Second wanted vehicle, for multi-alert testing</td>
+                        </tr>
+                        <tr>
+                            <td><code>DL03EF4444</code></td>
+                            <td><span class="pill watch">SURVEILLANCE</span></td>
+                            <td>Amber, tracked across camera nodes</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3>Test without a camera first</h3>
+            <p>Confirm the business logic end to end before involving optics:</p>
+            <div class="code">
+                <div class="code-head"><span class="where">any shell</span><button type="button" data-copy>Copy</button></div>
+<pre>curl -X POST http://localhost:8000/api/detect \
+  -H "Content-Type: application/json" \
+  -d '{"plate_number":"MH12CD2222","camera_node_id":"NODE-01"}'</pre>
+            </div>
+            <p>
+                With the dashboard open you should see the red banner fire instantly. Every scanner also
+                has a manual plate field that does the same thing.
+            </p>
+
+            <h3>Test the camera</h3>
+            <p>
+                Open <code>http://localhost:8000/plate.html</code> on the PC. It renders large,
+                high-contrast plates with buttons to switch between all five. Aim the phone's guide box so
+                the plate <strong>fills the box</strong>.
+            </p>
+
+            <div class="note warn">
+                <span class="tag">Print the plate if you can</span>
+                <p>
+                    Photographing a monitor produces moiré interference — the concentric ripple pattern that
+                    appears when a camera shoots a pixel grid — which measurably degrades OCR.
+                    Paper is markedly more reliable. Press <kbd>Ctrl</kbd>+<kbd>P</kbd> on the plate page.
+                </p>
+            </div>
+
+            <div class="note warn">
+                <span class="tag">Plate format is enforced</span>
+                <p>
+                    Plates must match the Indian structure: <strong>two state letters, one or two RTO
+                    digits, one to three series letters, four digits</strong>. Something like
+                    <code>KA 1352</code> has no series letters, is structurally invalid, and will be
+                    rejected even if OCR reads it perfectly. Use the seeded plates above.
+                </p>
+            </div>
+
+            <h3>What to check on the dashboard</h3>
+            <ul>
+                <li><strong>Live Dashboard</strong> — detections stream into the feed as they happen.</li>
+                <li><strong>Surveillance Tracking</strong> — flagged vehicles plotted as a path across camera nodes.</li>
+                <li><strong>Vehicle Directory</strong> — search the registry, change any vehicle's status, add plates.</li>
+                <li><strong>Alerts</strong> — every critical alert, with acknowledge.</li>
+                <li><strong>Audit &amp; Export</strong> — full audit trail plus CSV/JSON export of all tables.</li>
+            </ul>
+
+            <div class="note">
+                <span class="tag">Audio</span>
+                <p>
+                    Browsers block sound until the page has been interacted with. Click anywhere in the
+                    dashboard once after loading, and the alarm tone will play on subsequent alerts.
+                </p>
+            </div>
+        </section>
+
+        <!-- ============ LOCAL ============ -->
+        <section id="local">
+            <h2><span class="num">08</span> Run without Docker</h2>
+            <p>Useful for development, with hot reload on both server and dashboard.</p>
+
+            <div class="code">
+                <div class="code-head"><span class="where">terminal 1 — surveillance/server</span><button type="button" data-copy>Copy</button></div>
+<pre>cd surveillance/server
+npm install
+npm run seed      <span class="c"># creates and fills the database</span>
+npm run dev       <span class="c"># starts on :8000 and :8443</span></pre>
+            </div>
+
+            <div class="code">
+                <div class="code-head"><span class="where">terminal 2 — surveillance/admin</span><button type="button" data-copy>Copy</button></div>
+<pre>cd surveillance/admin
+npm install
+npm run dev       <span class="c"># dashboard on :5180, proxies API to :8000</span></pre>
+            </div>
+
+            <p>
+                The server prints its LAN addresses on startup — use those in the mobile app.
+                Building the dashboard (<code>npm run build</code> in <code>admin/</code>) makes the
+                server host it directly on port 8000, so a single port serves everything.
+            </p>
+
+            <p>The original admin console runs the same way on ports 4000/4443:</p>
+            <div class="code">
+                <div class="code-head"><span class="where">repo root</span><button type="button" data-copy>Copy</button></div>
+<pre>cd server &amp;&amp; npm install &amp;&amp; npm run seed &amp;&amp; npm run dev
+cd client &amp;&amp; npm install &amp;&amp; npm run dev</pre>
+            </div>
+        </section>
+
+        <!-- ============ API ============ -->
+        <section id="api">
+            <h2>API reference</h2>
+            <p>All endpoints are served from the surveillance stack on port 8000.</p>
+
+            <div class="tw">
+                <table>
+                    <thead><tr><th>Method</th><th>Path</th><th>Purpose</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>POST</code></td><td><code>/api/detect</code></td><td><strong>Core endpoint</strong> — image or plate in, full detection result out</td></tr>
+                        <tr><td><code>GET</code></td><td><code>/api/health</code></td><td>Status and which vision engine is active</td></tr>
+                        <tr><td><code>GET</code></td><td><code>/api/stats</code></td><td>Dashboard aggregates</td></tr>
+                        <tr><td><code>GET</code></td><td><code>/api/vehicles</code></td><td>Search registry — <code>search</code>, <code>status</code>, <code>page</code>, <code>limit</code></td></tr>
+                        <tr><td><code>GET</code></td><td><code>/api/vehicles/:plate</code></td><td>One vehicle with fines and movement history</td></tr>
+                        <tr><td><code>POST</code></td><td><code>/api/vehicles</code></td><td>Add a vehicle</td></tr>
+                        <tr><td><code>PATCH</code></td><td><code>/api/vehicles/:plate/status</code></td><td>Change status</td></tr>
+                        <tr><td><code>GET</code></td><td><code>/api/alerts</code></td><td>Alerts — <code>acknowledged=false</code> for open only</td></tr>
+                        <tr><td><code>PATCH</code></td><td><code>/api/alerts/:id/acknowledge</code></td><td>Acknowledge an alert</td></tr>
+                        <tr><td><code>GET</code></td><td><code>/api/movements</code></td><td>Movement logs — <code>plate</code>, <code>node</code></td></tr>
+                        <tr><td><code>GET</code></td><td><code>/api/surveillance/trails</code></td><td>Every flagged vehicle with its full path</td></tr>
+                        <tr><td><code>GET</code></td><td><code>/api/nodes</code></td><td>Camera nodes and detection counts</td></tr>
+                        <tr><td><code>GET</code></td><td><code>/api/audit</code></td><td>Audit trail — <code>event_type</code></td></tr>
+                        <tr><td><code>GET</code></td><td><code>/api/export/:entity.csv</code></td><td>Export as CSV or JSON</td></tr>
+                        <tr><td><code>WS</code></td><td><code>/ws</code></td><td>Live events — see below</code></td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3>WebSocket events</h3>
+            <div class="tw">
+                <table>
+                    <thead><tr><th>Event</th><th>Fires when</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>detection</code></td><td>Any plate is detected, matched or not</td></tr>
+                        <tr><td><code>critical_alert</code></td><td>A <span class="pill wanted">WANTED</span> vehicle is detected — drives the banner and alarm</td></tr>
+                        <tr><td><code>registry_changed</code></td><td>A vehicle is added or its status changes</td></tr>
+                        <tr><td><code>alert_acknowledged</code></td><td>An operator acknowledges an alert</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3>Detection response by status</h3>
+            <div class="tw">
+                <table>
+                    <thead><tr><th>Status</th><th>Server behaviour</th></tr></thead>
+                    <tbody>
+                        <tr><td><span class="pill normal">NORMAL</span></td><td>Logs the sighting; returns owner, vehicle and unpaid fines</td></tr>
+                        <tr><td><span class="pill watch">SURVEILLANCE</span></td><td>Appends to the movement trail and writes an audit entry; returns the last 10 sightings</td></tr>
+                        <tr><td><span class="pill wanted">WANTED</span></td><td>Writes a <code>CRITICAL</code> alert and broadcasts <code>critical_alert</code></td></tr>
+                        <tr><td>unregistered</td><td>Logs as unmatched; returns closest plates by edit distance</td></tr>
+                        <tr><td>no plate</td><td>Returns <code>plate_found: false</code> — nothing is fabricated</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- ============ SCHEMA ============ -->
+        <section id="schema">
+            <h2>Database schema</h2>
+            <p>
+                SQLite via Node's built-in <code>node:sqlite</code>. The file lives at
+                <code>surveillance/server/data/surveillance.db</code>, or inside a Docker volume when
+                containerised.
+            </p>
+
+            <div class="tw">
+                <table>
+                    <thead><tr><th>Table</th><th>Key columns</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>vehicles</code></td><td><code>plate_number</code>, <code>owner_name</code>, <code>vehicle_model</code>, <code>registration_date</code>, <code>status</code>, <code>status_reason</code></td></tr>
+                        <tr><td><code>fines</code></td><td><code>plate_number</code>, <code>violation_type</code>, <code>amount</code>, <code>date_issued</code>, <code>paid_status</code></td></tr>
+                        <tr><td><code>movement_logs</code></td><td><code>plate_number</code>, <code>camera_node_id</code>, <code>detected_at</code>, <code>snapshot_url</code>, <code>confidence</code></td></tr>
+                        <tr><td><code>alerts</code></td><td><code>plate_number</code>, <code>movement_log_id</code>, <code>camera_node_id</code>, <code>severity</code>, <code>acknowledged</code></td></tr>
+                        <tr><td><code>audit_logs</code></td><td><code>event_type</code>, <code>description</code>, <code>timestamp</code></td></tr>
+                        <tr><td><code>camera_nodes</code></td><td><code>id</code>, <code>label</code>, <code>location</code>, <code>lat</code>, <code>lng</code>, <code>last_seen_at</code></td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <p>
+                <code>status</code> is constrained to <code>NORMAL</code>, <code>SURVEILLANCE</code> or
+                <code>WANTED_CRIMINAL</code> — these three values drive the entire alerting pipeline.
+            </p>
+        </section>
+
+        <!-- ============ TROUBLESHOOTING ============ -->
+        <section id="trouble">
+            <h2>Troubleshooting</h2>
+            <p>Every issue below was hit during the build and verified fixed.</p>
+
+            <h3>Server and dashboard</h3>
+            <div class="tw">
+                <table>
+                    <thead><tr><th>Symptom</th><th>Cause &amp; fix</th></tr></thead>
+                    <tbody>
+                        <tr>
+                            <td>Empty reply, or dashboard shows “Reconnecting…”</td>
+                            <td>Docker Desktop stopped. Restart it, then <code>docker compose up -d</code>.</td>
+                        </tr>
+                        <tr>
+                            <td><code>EADDRINUSE</code> on start</td>
+                            <td>An old server still holds the port. Find and kill it:
+                                <code>netstat -ano | findstr :8000</code> then <code>taskkill /PID &lt;pid&gt; /F</code>.</td>
+                        </tr>
+                        <tr>
+                            <td>Page reloads in a loop</td>
+                            <td>A stale built bundle. Rebuild with <code>docker compose up -d --build</code> and hard-refresh (<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>R</kbd>).</td>
+                        </tr>
+                        <tr>
+                            <td>No alarm sound</td>
+                            <td>Browsers block audio before user interaction. Click once in the page.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3>Phone connectivity</h3>
+            <div class="tw">
+                <table>
+                    <thead><tr><th>Symptom</th><th>Cause &amp; fix</th></tr></thead>
+                    <tbody>
+                        <tr>
+                            <td>Connection times out from the phone</td>
+                            <td>Windows Firewall blocking inbound on a <strong>Public</strong> network — including Hyper-V switches. Add the firewall rule in step 4, or use the USB tunnel.</td>
+                        </tr>
+                        <tr>
+                            <td>Browser scanner shows no camera</td>
+                            <td>Page opened over <code>http://</code>. Camera needs a secure origin — use <code>https://&lt;ip&gt;:8443/scan.html</code>.</td>
+                        </tr>
+                        <tr>
+                            <td>Certificate doesn't cover the address</td>
+                            <td><code>HOST_IP</code> not set. Containers can't detect the host LAN IP themselves — set it in <code>.env</code> and recreate.</td>
+                        </tr>
+                        <tr>
+                            <td>Ping to the PC fails</td>
+                            <td>Normal — Windows blocks ICMP by default. It does not indicate TCP is blocked.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3>Android build and install</h3>
+            <div class="tw">
+                <table>
+                    <thead><tr><th>Symptom</th><th>Cause &amp; fix</th></tr></thead>
+                    <tbody>
+                        <tr>
+                            <td><em>“The filename, directory name, or volume label syntax is incorrect”</em></td>
+                            <td>Backslashes in <code>local.properties</code>. Use forward slashes.</td>
+                        </tr>
+                        <tr>
+                            <td><code>The required package `expo-asset` cannot be found</code></td>
+                            <td>Missing peer dependency. <code>npx expo install expo-asset</code>.</td>
+                        </tr>
+                        <tr>
+                            <td><code>INSTALL_FAILED_USER_RESTRICTED</code></td>
+                            <td>MIUI blocking ADB installs. Enable <strong>Install via USB</strong>, or push the APK and tap it in Files.</td>
+                        </tr>
+                        <tr>
+                            <td>Autolinking fails mid-build</td>
+                            <td>Gradle run from Git Bash. Use PowerShell or CMD.</td>
+                        </tr>
+                        <tr>
+                            <td><code>adb shell input</code> permission denied</td>
+                            <td>MIUI blocks event injection. Requires <em>USB debugging (Security settings)</em>; tap manually instead.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3>Detection accuracy</h3>
+            <div class="tw">
+                <table>
+                    <thead><tr><th>Symptom</th><th>Cause &amp; fix</th></tr></thead>
+                    <tbody>
+                        <tr>
+                            <td><code>module 'expo.modules.interfaces.filesystem.AppDirectories' not found</code></td>
+                            <td>Missing <code>expo-file-system</code>, which the camera writes photos through. Install and rebuild.</td>
+                        </tr>
+                        <tr>
+                            <td>Reads unrelated text from the scene</td>
+                            <td>The frame includes background text. Fill the guide box with the plate — the app crops to it before upload.</td>
+                        </tr>
+                        <tr>
+                            <td>Plate read but “not in registry”</td>
+                            <td>Either a genuine OCR slip — tap the suggested plate — or an invalid plate format that can never match.</td>
+                        </tr>
+                        <tr>
+                            <td>Consistently poor reads</td>
+                            <td>Tesseract's inherent limit. Set <code>ANTHROPIC_API_KEY</code> to enable Claude Vision; print plates instead of photographing screens.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- ============ STRUCTURE ============ -->
+        <section id="structure">
+            <h2>Project structure</h2>
+
+<div class="tree"><b>anpr_detection_system/</b>
+├── <b>docker-compose.yml</b>          <i>both stacks — start here</i>
+├── <b>Dockerfile.console</b>          <i>admin console image</i>
+├── <b>.env</b>                        <i>ANTHROPIC_API_KEY, HOST_IP (you create this)</i>
+│
+├── <b>surveillance/</b>               <i>AI surveillance prototype</i>
+│   ├── Dockerfile
+│   ├── <b>server/</b>
+│   │   ├── src/index.js           <i>HTTP + HTTPS listeners</i>
+│   │   ├── src/db/schema.sql      <i>six tables</i>
+│   │   ├── src/db/seed.js         <i>1,200 vehicles + test plates</i>
+│   │   ├── src/vision/claude.js   <i>Claude Vision, structured output</i>
+│   │   ├── src/vision/tesseract.js<i>local OCR fallback</i>
+│   │   ├── src/vision/pipeline.js <i>hybrid orchestrator</i>
+│   │   ├── src/routes/detect.js   <i>the core endpoint</i>
+│   │   ├── src/ws/hub.js          <i>WebSocket broadcast</i>
+│   │   └── public/scan.html       <i>browser scanner + plate.html</i>
+│   ├── <b>admin/</b>                  <i>React + Vite + Tailwind dashboard</i>
+│   │   └── src/pages/             <i>Dashboard · Tracking · Directory · Alerts · Audit</i>
+│   └── <b>mobile/</b>                 <i>React Native / Expo edge camera</i>
+│       ├── App.js
+│       └── src/ScannerScreen.js   <i>viewfinder, crop, dispatch</i>
+│
+├── <b>server/</b> + <b>client/</b>           <i>original ANPR admin console</i>
+├── landing/                    <i>marketing page</i>
+└── docs/                       <i>SRS, architecture, this runbook</i>
+</div>
+        </section>
+    </main>
+
+    <footer class="end">
+        <span>ANPR Surveillance Runbook</span>
+        <span>Demo system · all vehicle and owner data is synthetic</span>
+    </footer>
+</div>
+
+<script>
+    // Copy-to-clipboard for every command block — the page is mostly commands,
+    // so this is the primary interaction.
+    document.querySelectorAll('button[data-copy]').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+            const pre = btn.closest('.code').querySelector('pre');
+            // Strip comment spans so the clipboard holds runnable text only.
+            const clone = pre.cloneNode(true);
+            clone.querySelectorAll('.c').forEach((c) => c.remove());
+            const text = clone.textContent.replace(/[ \t]+$/gm, '').trim();
+            try {
+                await navigator.clipboard.writeText(text);
+                const original = btn.textContent;
+                btn.textContent = 'Copied';
+                setTimeout(() => { btn.textContent = original; }, 1400);
+            } catch {
+                btn.textContent = 'Press Ctrl+C';
+                setTimeout(() => { btn.textContent = 'Copy'; }, 1800);
+            }
+        });
+    });
+</script>
