@@ -11,6 +11,12 @@ function lanIPs() {
     for (const ifaces of Object.values(os.networkInterfaces())) {
         for (const i of ifaces || []) if (i.family === 'IPv4' && !i.internal) out.push(i.address);
     }
+    // In Docker the container only sees its bridge IP, not the host's LAN
+    // address that a phone actually connects to — HOST_IP adds it to the cert.
+    for (const extra of String(process.env.HOST_IP || '').split(',')) {
+        const ip = extra.trim();
+        if (/^\d{1,3}(\.\d{1,3}){3}$/.test(ip) && !out.includes(ip)) out.push(ip);
+    }
     return out;
 }
 

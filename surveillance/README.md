@@ -62,7 +62,60 @@ surveillance/
 
 ---
 
-## 2. Run it (three commands)
+## 2. Run it with Docker (recommended — one command)
+
+From the **repository root** (`anpr_detection_system/`):
+
+```bash
+docker compose up -d
+```
+
+That builds and starts both stacks, seeds the demo data on first boot, and
+serves everything:
+
+| Service | URL | What it is |
+|---|---|---|
+| **surveillance** | http://localhost:8000 | This prototype — dashboard, API, WebSocket, browser scanner |
+| | https://localhost:8443 | HTTPS (needed for phone camera access) |
+| **console** | http://localhost:4000 | The original ANPR admin console |
+| | https://localhost:4443 | HTTPS |
+
+Useful commands:
+
+```bash
+docker compose ps                        # health status of both services
+docker compose logs -f surveillance      # follow logs
+docker compose restart surveillance      # restart (data is preserved)
+docker compose down                      # stop (data is preserved in volumes)
+docker compose down -v                   # stop AND wipe the databases
+docker compose up -d --build             # rebuild after code changes
+```
+
+### Optional configuration
+
+Create a `.env` file next to `docker-compose.yml`:
+
+```bash
+# Enables Claude Vision. Without it the system uses local Tesseract OCR.
+ANTHROPIC_API_KEY=sk-ant-...
+
+# Your PC's LAN IP. Containers can't detect it themselves, and it must be in
+# the HTTPS certificate for the phone scanner to work over Wi-Fi.
+HOST_IP=192.168.1.5
+```
+
+Then `docker compose up -d --force-recreate`. Without `HOST_IP` the HTTPS
+certificate only covers `localhost`, so the phone scanner will not load over
+Wi-Fi — set it before testing with a phone.
+
+**Data persistence:** each service keeps its SQLite database in a named Docker
+volume, so restarts and rebuilds never lose data. Seeding runs only when the
+database is missing or empty. To reset to fresh demo data:
+`docker compose down -v && docker compose up -d`.
+
+---
+
+## 2b. Or run it locally without Docker
 
 Requires **Node.js 22.5+**. No database server, no Python, no native build tools.
 
@@ -100,6 +153,7 @@ The server prints its LAN address on startup — **use that IP in the mobile app
 
 1. Phone on the **same Wi-Fi** as the server.
 2. Open **`https://<server-ip>:8443/scan.html`** on the phone.
+   (Docker: set `HOST_IP` in `.env` first, or the certificate won't cover this address.)
 3. Accept the certificate warning once (Advanced → Proceed). This is expected —
    the server generates a self-signed certificate, and browsers only permit
    camera access on a secure origin.

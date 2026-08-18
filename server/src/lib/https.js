@@ -48,5 +48,11 @@ export function getLanIPs() {
             if (iface.family === 'IPv4' && !iface.internal) ips.push(iface.address);
         }
     }
+    // In Docker the container only sees its bridge IP, not the host's LAN
+    // address that a phone actually connects to — HOST_IP adds it in.
+    for (const extra of String(process.env.HOST_IP || '').split(',')) {
+        const ip = extra.trim();
+        if (/^\d{1,3}(\.\d{1,3}){3}$/.test(ip) && !ips.includes(ip)) ips.push(ip);
+    }
     return ips;
 }

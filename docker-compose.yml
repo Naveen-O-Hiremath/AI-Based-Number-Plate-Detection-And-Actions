@@ -1,0 +1,62 @@
+# ANPR project — both stacks, one command:  docker compose up -d
+#
+#   surveillance  → AI surveillance & alert prototype   http://localhost:8000
+#   console       → ANPR admin console (traffic system) http://localhost:4000
+#
+# Optional .env next to this file:
+#   ANTHROPIC_API_KEY=sk-ant-...   enables Claude Vision (else Tesseract only)
+#   HOST_IP=192.168.1.5            your PC's LAN IP, so phone HTTPS certs work
+
+services:
+  surveillance:
+    build:
+      context: ./surveillance
+      dockerfile: Dockerfile
+    image: anpr/surveillance:latest
+    container_name: anpr-surveillance
+    restart: unless-stopped
+    ports:
+      - "8000:8000"   # API + dashboard + browser scanner
+      - "8443:8443"   # HTTPS — required for phone camera access
+    environment:
+      PORT: 8000
+      HTTPS_PORT: 8443
+      # Empty is fine — the server falls back to local Tesseract OCR.
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      HOST_IP: ${HOST_IP:-}
+    volumes:
+      - surveillance-data:/app/server/data
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:8000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+
+  console:
+    build:
+      context: .
+      dockerfile: Dockerfile.console
+    image: anpr/console:latest
+    container_name: anpr-console
+    restart: unless-stopped
+    ports:
+      - "4000:4000"   # API + admin console
+      - "4443:4443"   # HTTPS — required for phone camera access
+    environment:
+      PORT: 4000
+      HTTPS_PORT: 4443
+      JWT_SECRET: ${JWT_SECRET:-anpr-demo-dev-secret-change-in-production}
+      HOST_IP: ${HOST_IP:-}
+    volumes:
+      - console-data:/app/server/data
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:4000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+
+volumes:
+  surveillance-data:
+  console-data:

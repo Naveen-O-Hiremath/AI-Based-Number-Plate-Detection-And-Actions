@@ -1,0 +1,16 @@
+node_modules
+**/node_modules
+data
+**/data
+dist
+**/dist
+.env
+**/.env
+.git
+*.traineddata
+**/*.traineddata
+.expo
+**/.expo
+mobile
+landing
+docs

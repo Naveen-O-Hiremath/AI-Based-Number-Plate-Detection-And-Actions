@@ -5,22 +5,44 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
-    "splash": { "backgroundColor": "#0a0f1c", "resizeMode": "contain" },
-    "assetBundlePatterns": ["**/*"],
+    "splash": {
+      "backgroundColor": "#0a0f1c",
+      "resizeMode": "contain"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
         "NSCameraUsageDescription": "Used to capture number plates for ANPR detection.",
-        "NSAppTransportSecurity": { "NSAllowsArbitraryLoads": true }
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": true
+        }
       }
     },
     "android": {
       "package": "com.anpr.edgecamera",
-      "permissions": ["CAMERA"],
-      "usesCleartextTraffic": true
+      "permissions": [
+        "CAMERA"
+      ]
     },
     "plugins": [
-      ["expo-camera", { "cameraPermission": "Allow ANPR Edge Camera to use the camera to scan number plates." }]
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow ANPR Edge Camera to use the camera to scan number plates."
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ],
+      "expo-asset"
     ]
   }
 }
